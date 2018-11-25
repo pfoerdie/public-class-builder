@@ -6,6 +6,14 @@
 const
     _privateMap = new WeakMap();
 
+/**
+ * Returns the private instance, if any public instances has been found.
+ * @name PublicClassBuilder~filterPublic
+ * @param {*} obj Any object to check. Values of arrays or promises will also be considered.
+ * @returns {*} Returns the private instance if possible.
+ * @this {PublicClassBuilder}
+ * @private
+ */
 function filterPublic(obj) {
     const _private = _privateMap.get(this);
 
@@ -21,6 +29,14 @@ function filterPublic(obj) {
         return obj;
 } // PublicClassBuilder~filterPublic
 
+/**
+ * Returns the public instance, if any private instances has been found.
+ * @name PublicClassBuilder~filterPrivate
+ * @param {*} obj Any object to check. Values of arrays or promises will also be considered.
+ * @returns {*} Returns the public instance if possible.
+ * @this {PublicClassBuilder}
+ * @private
+ */
 function filterPrivate(obj) {
     const _private = _privateMap.get(this);
 
@@ -36,8 +52,18 @@ function filterPrivate(obj) {
         return obj;
 } // PublicClassBuilder~filterPrivate
 
+/**
+ * Creates a public class out of another class, using just the prototype and skipping all _ properties.
+ * @name PublicClassBuilder~buildPublicClass
+ * @param {class} PrivateClass The base class for the public class.
+ * @returns {class} The public class that got created.
+ * @this {PublicClassBuilder}
+ * @private
+ */
 function buildPublicClass(PrivateClass) {
-    const _private = _privateMap.get(this);
+    const
+        _builderInstance = this,
+        _private = _privateMap.get(this);
 
     /* 1. create the public class */
     class PublicClass {
@@ -52,7 +78,7 @@ function buildPublicClass(PrivateClass) {
                     throw new Error(`${PublicClass.name}#constructor(privateInstance) -> privateInstance already has an associated publicInstance`);
             } else {
                 /* 1.1b. constructed from the public class */
-                let privatArgs = filterPublic.call(this, publicArgs);
+                let privatArgs = filterPublic.call(_builderInstance, publicArgs);
                 privateInstance = new PrivateClass(...privatArgs);
             }
 
@@ -93,14 +119,14 @@ function buildPublicClass(PrivateClass) {
                 /* 2.4a.1. the getter */
                 publicProperty.get = function () {
                     let privateResult = privateProperty.get.call(PrivateClass);
-                    return filterPrivate.call(this, privateResult);
+                    return filterPrivate.call(_builderInstance, privateResult);
                 };
             }
 
             if (privateProperty.set) {
                 /* 2.4a.2. the setter */
                 publicProperty.set = function (publicValue) {
-                    let privatValue = filterPublic.call(this, publicValue);
+                    let privatValue = filterPublic.call(_builderInstance, publicValue);
                     privateProperty.set.call(PrivateClass, privatValue);
                 };
             }
@@ -111,15 +137,15 @@ function buildPublicClass(PrivateClass) {
             if (typeof privateProperty.value === 'function') {
                 /* 2.4b.1 usually its a function */
                 publicProperty.value = function (...publicArgs) {
-                    let privatArgs = filterPublic.call(this, publicArgs);
+                    let privatArgs = filterPublic.call(_builderInstance, publicArgs);
                     let privateResult = privateProperty.value.apply(PrivateClass, privatArgs);
-                    return filterPrivate.call(this, privateResult);
+                    return filterPrivate.call(_builderInstance, privateResult);
                 };
             } else {
                 /* 2.4b.2 sometimes not */
                 publicProperty.get = function () {
                     let privateResult = privateProperty.value;
-                    return filterPrivate.call(this, privateResult);
+                    return filterPrivate.call(_builderInstance, privateResult);
                 };
             }
         }
@@ -151,7 +177,7 @@ function buildPublicClass(PrivateClass) {
                     if (!_private.publicInstancesMap.has(this)) return;
 
                     let privateResult = privateProtoProperty.get.call(_private.publicInstancesMap.get(this));
-                    return filterPrivate.call(this, privateResult);
+                    return filterPrivate.call(_builderInstance, privateResult);
                 };
             }
 
@@ -160,7 +186,7 @@ function buildPublicClass(PrivateClass) {
                 publicProtoProperty.set = function (publicValue) {
                     if (!_private.publicInstancesMap.has(this)) return;
 
-                    let privatValue = filterPublic.call(this, publicValue);
+                    let privatValue = filterPublic.call(_builderInstance, publicValue);
                     privateProtoProperty.set.call(_private.publicInstancesMap.get(this), privatValue);
                 };
             }
@@ -173,9 +199,9 @@ function buildPublicClass(PrivateClass) {
                 publicProtoProperty.value = function (...publicArgs) {
                     if (!_private.publicInstancesMap.has(this)) return;
 
-                    let privatArgs = filterPublic.call(this, publicArgs);
+                    let privatArgs = filterPublic.call(_builderInstance, publicArgs);
                     let privateResult = privateProtoProperty.value.apply(_private.publicInstancesMap.get(this), privatArgs);
-                    return filterPrivate.call(this, privateResult);
+                    return filterPrivate.call(_builderInstance, privateResult);
                 };
             } else {
                 /* 3.4b.2 sometimes not */
@@ -183,7 +209,7 @@ function buildPublicClass(PrivateClass) {
                     if (!_private.publicInstancesMap.has(this)) return;
 
                     let privateResult = privateProtoProperty.value;
-                    return filterPrivate.call(this, privateResult);
+                    return filterPrivate.call(_builderInstance, privateResult);
                 };
             }
         }
@@ -227,8 +253,11 @@ class PublicClassBuilder {
 
             return PublicClass;
         }
-
     } // PublicClassBuilder#getPublicClass
+
+    getPrivateClass(PublicClass) {
+        // TODO PublicClassBuilder#getPrivateClass
+    } // PublicClassBuilder#getPrivateClass
 
 } // PublicClassBuilder
 

@@ -10,4 +10,6 @@ class Test {
     _test() { }
 }
 
-console.log(pcb.getPublicClass(Test));
+let PublicTest = pcb.getPublicClass(Test);
+
+console.log(PublicTest);
