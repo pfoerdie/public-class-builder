@@ -1,1 +1,1 @@
-# PublicClassBuilder
+# @pfoerdie/public-class-builder
